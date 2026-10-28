@@ -1,12 +1,12 @@
-// Paul Alberti 260ADB178
-// https://github.com/<PaulAlb83>/calc-lab-home
-// Compile with: gcc -O2 -Wall -Wextra -std=c17 -o calc calc.c -lm
-// Resources used: Claude (Anthropic), exemple of prompt in comment
-//   man pages (mkdir, stat, strtod, readdir, feature_test_macros); the lab statement
-//   (grammar hint). Details in comments where used (search "AI (" and "Resource:").
+//Paul Alberti 260ADB178
+//https://github.com/<PaulAlb83>/calc-lab-home
+//Compile with: gcc -O2 -Wall -Wextra -std=c17 -o calc calc.c -lm
+//Resources used: Claude (Anthropic), exemple of prompt in comment
+// man pages (mkdir, stat, strtod, readdir, feature_test_macros); the lab statement
+//(grammar hint). Details in comments where used (search "AI (" and "Resource:").
 
 
-// Resource: man 7 feature_test_macros.
+//Resource: man 7 feature_test_macros.
 #define _POSIX_C_SOURCE 200809L
 
 #include <stdio.h>
@@ -18,28 +18,28 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
-// Name parts of the output files, built from the lab's naming rule
-// (<input>_<name>_<lastname>_<studentid>). The case of the student ID must
-// match what cli.sh expects, so run cli.sh to confirm it.
+//Name parts of the output files, built from the lab's naming rule
+//(<input>_<name>_<lastname>_<studentid>). The case of the student ID must
+//match what cli.sh expects, so run cli.sh to confirm it.
 #define FILE_SUFFIX "_paul_alberti_260ADB178.txt"
 #define DIR_SUFFIX  "_paul_260ADB178"
 #define PATH_LEN    4096
 
 
-// Types and shared state.
-// AI (Claude): I asked for an example of how to declare the token types
-// I wrote the declarations below myself.
+//Types and shared state.
+//AI (Claude): I asked for an example of how to declare the token types
+//I wrote the declarations below myself.
 
 
 typedef enum {
     T_INT, T_FLOAT,
     T_PLUS, T_MINUS, T_STAR, T_SLASH, T_POW,
     T_LPAREN, T_RPAREN,
-    T_EOL,      // '\n' and end of file are treated the same: both end a line
-    T_BAD       // invalid char: the tokenizer only labels it, the parser reports it
+    T_EOL,      //'\n' and end of file are treated the same: both end a line
+    T_BAD       //invalid char: the tokenizer only labels it, the parser reports it
 } TokType;
 
-// One struct for int and float: is_float tells which field to read.
+//One struct for int and float: is_float tells which field to read.
 typedef struct {
     int is_float;
     long long i;
@@ -48,28 +48,28 @@ typedef struct {
 
 typedef struct {
     TokType type;
-    size_t pos;   // 1-based position of the first character, because errors
-                  // are reported at the START of the token being looked at
+    size_t pos;   //1-based position of the first character, because errors
+                  //are reported at the START of the token being looked at
     Value val;
 } Token;
 
-// The whole file sits in one buffer and is never copied: a position is just
-// an offset, so multi-MB files cost nothing extra.
+//The whole file sits in one buffer and is never copied: a position is just
+//an offset, so multi-MB files cost nothing extra.
 // Globals because the parser only ever works on one file at a time.
-static char *buf;     // buf[len] == '\0' (see read_file)
+static char *buf;     //buf[len] == '\0' (see read_file)
 static size_t len;
-static size_t off;    // next unread character (0-based)
-static Token tok;     // current token: one token of lookahead is enough
+static size_t off;    //next unread character (0-based)
+static Token tok;     //current token: one token of lookahead is enough
 
 static int has_error;
 static size_t err_pos;
 
-// Results wait here and are written at the end, because a file with any
-// error must contain ONLY the error, never partial results.
+//Results wait here and are written at the end, because a file with any
+//error must contain ONLY the error, never partial results.
 static char *out;
 static size_t out_len, out_cap;
 
-// Only the first error counts: after it, every parser function stops.
+//Only the first error counts: after it, every parser function stops.
 static void fail(size_t pos) {
     if (!has_error) {
         has_error = 1;
@@ -77,10 +77,10 @@ static void fail(size_t pos) {
     }
 }
 
-// The capacity doubles, so N appends cost O(N) in total instead of copying
-// the whole buffer at every line.
-// AI (Claude): I asked for help structuring the capacity variable and the
-// while loop. I kept the doubling idea; the rest is mine.
+//The capacity doubles, so N appends cost O(N) in total instead of copying
+//the whole buffer at every line.
+//AI (Claude): I asked for help structuring the capacity variable and the
+//while loop. I kept the doubling idea; the rest is mine.
 static void out_append(const char *s, size_t n) {
     if (out_len + n > out_cap) {
         size_t cap = out_cap ? out_cap : 4096;
@@ -109,19 +109,17 @@ static void append_value(Value v) {
 // Tokenizer
 
 
-// Positions: off moves forward over the whole file and is never reset at a
-// new line, so off + 1 is already the position the lab wants. No line or
-// column counting is needed.
-// AI (Claude): prompt "donne moi une piste pour la structure de next_token()"
-// (English: "give me a lead for the structure of next_token()").
+//positions: off moves forward over the whole file and is never reset at a
+//new line, so off + 1 is already the position the lab wants. No line or
+//column counting is needed.
+//AI (Claude): "give me a lead for the structure of next_token()"
 // I reused its skeleton; the body is mine.
-// Link: <to add>
 static void next_token(void) {
     while (off < len && (buf[off] == ' ' || buf[off] == '\t')) off++;
 
-    // Recorded after the blanks but before reading the token. At end of file
-    // this gives len + 1, which is the position expected for a missing operand
-    // on a last line without '\n'.
+    //Recorded after the blanks but before reading the token. At end of file
+    //this gives len + 1, which is the position expected for a missing operand
+    //on a last line without '\n'.
     tok.pos = off + 1;
 
     if (off >= len) {
@@ -133,24 +131,24 @@ static void next_token(void) {
 
     if (isdigit((unsigned char)c)) {
         size_t start = off;
-        // I only skip the digits first: adding them up before knowing whether
-        // this is a float could overflow a long long on a long float.
+        //I only skip the digits first: adding them up before knowing whether
+        //this is a float could overflow a long long on a long float.
         while (isdigit((unsigned char)buf[off])) off++;
 
-        // A '.' makes a float only if a digit follows. Otherwise I leave it,
-        // and it becomes an invalid character at its own position (so "5."
-        // and the 'e' of "1.5e3" fail where the lab says).
+        //A '.' makes a float only if a digit follows. Otherwise I leave it,
+        //and it becomes an invalid character at its own position (so "5."
+        //and the 'e' of "1.5e3" fail where the lab says).
         if (buf[off] == '.' && isdigit((unsigned char)buf[off + 1])) {
             off++;
             while (isdigit((unsigned char)buf[off])) off++;
-            // strtod needs a '\0'. Writing one temporarily avoids copying
-            // the digits into a new string.
-            // AI (Claude): I asked it to explain how to use buf and the other
-            // elements needed to run strtod on a slice of the buffer without
-            // copying it. The save / write '\0' /
-            // restore trick comes from that explanation; the rest of the
-            // loop is mine.
-            // Resource: man 3 strtod.
+            //strtod needs a '\0'. Writing one temporarily avoids copying
+            //the digits into a new string.
+            //AI (Claude): I asked it to explain how to use buf and the other
+            //elements needed to run strtod on a slice of the buffer without
+            //copying it. The save / write '\0' /
+            //restore trick comes from that explanation; the rest of the
+            //loop is mine.
+            //Resource: man 3 strtod.
             char saved = buf[off];
             buf[off] = '\0';
             tok.val.is_float = 1;
@@ -194,8 +192,8 @@ static void next_token(void) {
 // Arithmetic
 
 
-// Dummy value returned after an error. Nobody reads it: callers check
-// has_error first.
+//Dummy value returned after an error. Nobody reads it: callers check
+//has_error first.
 static Value zero_value(void) {
     Value v;
     v.is_float = 0;
@@ -204,33 +202,33 @@ static Value zero_value(void) {
     return v;
 }
 
-// Square-and-multiply: one loop turn per bit of exp, not per unit, so
-// 1 ** 1000000000 is instant. exp >= 0 is checked by the caller.
-// AI (Claude): "I want us to work on the arithmetic part"
-//  Claude advised to
-// square only while bits remain, and this loop is the version it rewrote for
-// me. I went through it line by line and can explain it.
+//Square-and-multiply: one loop turn per bit of exp, not per unit, so
+//1 ** 1000000000 is instant. exp >= 0 is checked by the caller.
+//AI (Claude): "I want us to work on the arithmetic part"
+// Claude advised to
+//square only while bits remain, and this loop is the version it rewrote for me.
+//I went through it line by line and can explain it.
 static long long int_pow(long long base, long long exp) {
     long long result = 1;
     while (exp > 0) {
         if (exp & 1) result *= base;
         exp >>= 1;
-        // A last useless squaring could overflow (undefined behaviour for
-        // signed ints) even when the real result fits.
+        //A last useless squaring could overflow (undefined behaviour for
+        //signed ints) even when the real result fits.
         if (exp > 0) base *= base;
     }
     return result;
 }
 
-// Computes "a op b" ('P' means "**"). It takes two positions because the lab
-// reports division by zero and a negative exponent at the RIGHT OPERAND, but
-// an infinite/NaN float at the OPERATOR.
+//Computes "a op b" ('P' means "**"). It takes two positions because the lab
+//reports division by zero and a negative exponent at the RIGHT OPERAND, but
+//an infinite/NaN float at the OPERATOR.
 static Value apply(char op, Value a, Value b, size_t op_pos, size_t rhs_pos) {
     Value r = zero_value();
 
-    // Int or float is decided for each operation: if either side is a float,
-    // I compute in double (7 / 2 is 3, 7 / 2.0 is 3.5). A "1 + 2" elsewhere
-    // in the file stays an int.
+    //Int or float is decided for each operation: if either side is a float,
+    //I compute in double (7 / 2 is 3, 7 / 2.0 is 3.5). A "1 + 2" elsewhere
+    //in the file stays an int.
     if (a.is_float || b.is_float) {
         double x = a.is_float ? a.d : (double)a.i;
         double y = b.is_float ? b.d : (double)b.i;
@@ -247,7 +245,7 @@ static Value apply(char op, Value a, Value b, size_t op_pos, size_t rhs_pos) {
             case 'P': r.d = pow(x, y); break;   // 0.5 ** (0 - 1) is fine in float
             default: break;
         }
-        // The operator produced the inf/NaN (10.0 ** 400), so it gets the blame.
+        //The operator produced the inf/NaN (10.0 ** 400), so it gets the blame.
         if (!isfinite(r.d)) { fail(op_pos); return zero_value(); }
         return r;
     }
@@ -270,7 +268,7 @@ static Value apply(char op, Value a, Value b, size_t op_pos, size_t rhs_pos) {
     return r;
 }
 
-// ---------------------------------------------------------------------------
+
 // Recursive descent parser: one function per precedence level.
 //   expr    := term  { ('+' | '-') term }
 //   term    := power { ('*' | '/') power }
@@ -281,7 +279,7 @@ static Value apply(char op, Value a, Value b, size_t op_pos, size_t rhs_pos) {
 // AI (Claude):"what is the next step?
 //asked repeatedly while building the parser. I reused the
 // skeletons it gave me; the function bodies are mine.
-// ---------------------------------------------------------------------------
+
 
 static Value expr(void);   // forward declaration: primary() calls expr()
 
@@ -373,11 +371,11 @@ static void evaluate_all(void) {
         // character.
         while (off < len && (buf[off] == ' ' || buf[off] == '\t')) off++;
         if (off >= len) break;
-        if (buf[off] == '\n') {          // blank line: no output
+        if (buf[off] == '\n') {          //blank line: no output
             off++;
             continue;
         }
-        if (buf[off] == '#') {           // comment: skipped but still counted
+        if (buf[off] == '#') {           //comment: skipped but still counted
             while (off < len && buf[off] != '\n') off++;
             if (off < len) off++;
             continue;
@@ -385,7 +383,7 @@ static void evaluate_all(void) {
 
         next_token();
         Value v = expr();
-        // Only the line end may follow: this catches the extra ')' in "(1 + 2))".
+        //only the line end may follow: this catches the extra ')' in "(1 + 2))".
         if (!has_error && tok.type != T_EOL) fail(tok.pos);
         if (!has_error) append_value(v);
     }
@@ -394,9 +392,9 @@ static void evaluate_all(void) {
 
 // Files, folders and command line
 
-// One fread for the whole file (no repeated copying). The final '\0' matters:
-// the tokenizer peeks at buf[off + 1] without checking len.
-// AI (Claude): "show me the structure and point out the places have to fill in"I
+//One fread for the whole file (no repeated copying). The final '\0' matters:
+//the tokenizer peeks at buf[off + 1] without checking len.
+//AI (Claude): "show me the structure and point out the places have to fill in"I
  
 //It reminded me to use fseek with SEEK_END to get the file
 // size; the rest, including the error handling, is mine.
@@ -408,7 +406,7 @@ static char *read_file(const char *path, size_t *n) {
         fprintf(stderr, "calc: cannot read '%s'\n", path);
         return NULL;
     }
-    FILE *f = fopen(path, "rb");   // binary, so '\n' is never translated
+    FILE *f = fopen(path, "rb");   //binary, so '\n' is never translated
     if (!f) {
         fprintf(stderr, "calc: cannot open '%s': %s\n", path, strerror(errno));
         return NULL;
@@ -434,8 +432,8 @@ static char *read_file(const char *path, size_t *n) {
     return b;
 }
 
-// "dir/task1.txt" -> "task1", "labs/" -> "labs". Trailing slashes go first,
-// otherwise strrchr would find that last '/' and return an empty name.
+//"dir/task1.txt" -> "task1", "labs/" -> "labs". Trailing slashes go first,
+//otherwise strrchr would find that last '/' and return an empty name.
 static void base_name(const char *path, char *dst, size_t cap) {
     char tmp[PATH_LEN];
     snprintf(tmp, sizeof tmp, "%s", path);
@@ -448,8 +446,8 @@ static void base_name(const char *path, char *dst, size_t cap) {
     snprintf(dst, cap, "%.*s", (int)n, name);
 }
 
-// The lab says to reuse an existing folder, so EEXIST is not an error.
-// Resource: man 2 mkdir.
+//The lab says to reuse an existing folder, so EEXIST is not an error.
+//Resource: man 2 mkdir.
 static int make_outdir(const char *d) {
     if (mkdir(d, 0777) != 0 && errno != EEXIST) {
         fprintf(stderr, "calc: cannot create '%s': %s\n", d, strerror(errno));
@@ -458,8 +456,8 @@ static int make_outdir(const char *d) {
     return 0;
 }
 
-// Evaluates one file and writes its result. Returns 0 on success.
-// An ERROR:<pos> result is normal output, so the exit code stays 0.
+//Evaluates one file and writes its result. Returns 0 on success.
+//An ERROR:<pos> result is normal output, so the exit code stays 0.
 static int process_file(const char *in_path, const char *base, const char *outdir) {
     size_t n = 0;
     char *data = read_file(in_path, &n);
@@ -468,7 +466,7 @@ static int process_file(const char *in_path, const char *base, const char *outdi
     len = n;
     evaluate_all();
 
-    // Created after reading, so a missing input leaves no empty folder.
+    //Created after reading, so a missing input leaves no empty folder.
     if (make_outdir(outdir) != 0) {
         free(data);
         return 1;
@@ -486,8 +484,8 @@ static int process_file(const char *in_path, const char *base, const char *outdi
             fprintf(stderr, "calc: cannot write '%s': %s\n", path, strerror(errno));
             rc = 1;
         } else {
-            // On error ONLY the error is written. fclose is checked too:
-            // a disk-full failure can show up only when the data is flushed.
+            //On error ONLY the error is written. fclose is checked too:
+            //a disk-full failure can show up only when the data is flushed.
             if (has_error) {
                 if (fprintf(f, "ERROR:%zu\n", err_pos) < 0) rc = 1;
             } else if (out_len > 0 && fwrite(out, 1, out_len, f) != out_len) {
@@ -502,11 +500,11 @@ static int process_file(const char *in_path, const char *base, const char *outdi
     return rc;
 }
 
-// Options can come in any order, so I parse them all in one loop and check
-// the combination afterwards.
-// AI (Claude): prompt "what is the next step? Guide me with the skeleton
-// I also asked for help on a few smaller parts of main() whose exact prompts I
-// no longer have. I wrote the checks myself from section 4 of the lab.
+//Options can come in any order, so I parse them all in one loop and check
+//the combination afterwards.
+//AI (Claude): prompt "what is the next step? Guide me with the skeleton
+//I also asked for help on a few smaller parts of main() to correct a few writing errors that I hadn't noticed
+// I wrote the checks myself from section 4 of the lab.
 
 int main(int argc, char **argv) {
     const char *dir = NULL, *outdir = NULL, *input = NULL;
@@ -535,15 +533,15 @@ int main(int argc, char **argv) {
         }
     }
 
-    // Exactly one of input file or -d DIR: this test is true when both or
-    // neither are given, and both are usage errors.
+    //exactly one of input file or -d DIR: this test is true when both or
+    //neither are given, and both are usage errors.
     if ((dir == NULL) == (input == NULL)) {
         fprintf(stderr, "usage: calc [-d DIR] [-o OUTDIR] [input.txt]\n");
         return 1;
     }
 
     char base[PATH_LEN];
-    char default_out[PATH_LEN + 64];   // room for DIR_SUFFIX after the base
+    char default_out[PATH_LEN + 64];   //room for DIR_SUFFIX after the base
     int rc = 0;
 
     if (input) {
@@ -566,8 +564,7 @@ int main(int argc, char **argv) {
         }
         rc = make_outdir(outdir);
 
-        // One file at a time, freed each time, so memory is bounded by the
-        // largest file.
+        //One file at a time, freed each time, so memory is bounded by the largest file. 
         // Resource: man 3 readdir.
         struct dirent *e;
         while (rc == 0 && (e = readdir(d)) != NULL) {
@@ -590,3 +587,9 @@ int main(int argc, char **argv) {
     free(out);
     return rc;
 }
+
+
+
+
+//I have also used it to translate some of my personal comments or prompts—originally 
+//written in French—into English, so that my explanations would be as clear as possible.
