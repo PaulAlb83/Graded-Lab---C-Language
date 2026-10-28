@@ -593,3 +593,6 @@ int main(int argc, char **argv) {
 
 //I have also used it to translate some of my personal comments or prompts—originally 
 //written in French—into English, so that my explanations would be as clear as possible.
+//Please note that I encountered issues with my previous GitHub account, so I created a new one,
+//to which I have transferred a significant portion of the work I had already completed. 
+//This explains why there are only a few, recent commits. Thank you for your understanding.
