@@ -1,12 +1,11 @@
 // Paul Alberti 260ADB178
-// https://github.com/<ton-pseudo>/calc-lab-home
+// https://github.com/<PaulAlb83>/calc-lab-home
 // Compile with: gcc -O2 -Wall -Wextra -std=c17 -o calc calc.c -lm
-// Resources used: Claude (Anthropic), several conversations (links in the comments
-//   below, plus one conversation used to review these comments: Link: <to add>);
+// Resources used: Claude (Anthropic), exemple of prompt in comment
 //   man pages (mkdir, stat, strtod, readdir, feature_test_macros); the lab statement
 //   (grammar hint). Details in comments where used (search "AI (" and "Resource:").
 
-// Without this, strict -std=c17 hides mkdir/stat/opendir.
+
 // Resource: man 7 feature_test_macros.
 #define _POSIX_C_SOURCE 200809L
 
@@ -279,10 +278,9 @@ static Value apply(char op, Value a, Value b, size_t op_pos, size_t rhs_pos) {
 //   primary := NUMBER | '(' expr ')'
 // Grammar from the lab hint. Precedence comes from the call order: in
 // 3 + 2 * 5, term() finishes the product before expr() ever sees the '+'.
-// AI (Claude): prompt "quelle est l'étape d'après ?" (English: "what is the
-// next step?"), asked repeatedly while building the parser. I reused the
+// AI (Claude):"what is the next step?
+//asked repeatedly while building the parser. I reused the
 // skeletons it gave me; the function bodies are mine.
-// Link: <to add>
 // ---------------------------------------------------------------------------
 
 static Value expr(void);   // forward declaration: primary() calls expr()
@@ -393,17 +391,15 @@ static void evaluate_all(void) {
     }
 }
 
-// ---------------------------------------------------------------------------
+
 // Files, folders and command line
-// ---------------------------------------------------------------------------
 
 // One fread for the whole file (no repeated copying). The final '\0' matters:
 // the tokenizer peeks at buf[off + 1] without checking len.
-// AI (Claude): prompt "Montre moi la structure et indique les endroits que je
-// dois compléter" (English: "show me the structure and point out the places I
-// have to fill in"). It reminded me to use fseek with SEEK_END to get the file
+// AI (Claude): "show me the structure and point out the places have to fill in"I
+ 
+//It reminded me to use fseek with SEEK_END to get the file
 // size; the rest, including the error handling, is mine.
-// Link: <to add>
 // Resource: man 2 stat.
 static char *read_file(const char *path, size_t *n) {
     struct stat st;
@@ -508,11 +504,10 @@ static int process_file(const char *in_path, const char *base, const char *outdi
 
 // Options can come in any order, so I parse them all in one loop and check
 // the combination afterwards.
-// AI (Claude): prompt "Quelle est l'étape suivante ? Oriente moi avec le
-// squelette" (English: "what is the next step? Guide me with the skeleton").
+// AI (Claude): prompt "what is the next step? Guide me with the skeleton
 // I also asked for help on a few smaller parts of main() whose exact prompts I
 // no longer have. I wrote the checks myself from section 4 of the lab.
-// Link: <to add>
+
 int main(int argc, char **argv) {
     const char *dir = NULL, *outdir = NULL, *input = NULL;
 
